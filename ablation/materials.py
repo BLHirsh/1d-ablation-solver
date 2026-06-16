@@ -220,6 +220,82 @@ ALUMINA = Material(
     color='#f17a4e',
 )
 
+STEEL_304 = Material(
+    name='Stainless Steel 304',
+    k_func=_const(22),          
+    rho_func=_const(7200.0),   
+    cp_func=_const(500.0),     # https://www.azom.com/properties.aspx?ArticleID=965 490-530 J/(kg·K) at 300 K
+    L_func=_const(247e3),      # heat of fusion [J/kg]
+    T_ablation=1670.0,         # https://www.researchgate.net/figure/Thermophysical-properties-of-304-stainless-steel-and-process-parameters-Nomenclature_tbl1_231114628
+    color="#595454",
+)
+
+STEEL_316 = Material(
+    name='Stainless Steel 316',
+    k_func=_const(13),          
+    rho_func=_const(7900.0),   # 7.87	8.07 g/cm³ at 20°C
+    cp_func=_const(500.0),     # https://www.azom.com/properties.aspx?ArticleID=863 490-530 J/(kg·K) at 300 K
+    L_func=_const(260e3),      # heat of fusion [J/kg]
+    T_ablation=1648.0,         
+    color="#4d4d4d",
+)
+
+STEEL_4240 = Material(
+    name='Steel 4240',
+    k_func=_const(51),          
+    rho_func=_const(7800.0),   # 7.8 g/cm³ at 20°C
+    cp_func=_const(470.0),     # https://www.makeitfrom.com/material-properties/SAE-AISI-4024-G40240-Molybdenum-Steel
+    L_func=_const(250e3),      # heat of fusion [J/kg]
+    T_ablation=1693.0,         
+    color="#424424",
+)
+
+# Following from https://www.specialmetals.com/documents/technical-bulletins/inconel/inconel-alloy-625.pdf 
+_625_k_func = _make_interp(
+    T_pts=[116.15, 144.15, 200.15, 255.15, 311.15, 366.15, 422.15, 477.15, 589.15, 700.15, 811.15, 922.15, 1033.15, 1144.15, 1255.15],
+    v_pts=[   7.2,   7.5,    8.4,    9.2, 9.8, 10.1, 10.8, 12.5, 14.1, 15.7, 17.5, 19.0, 20.8, 22.8, 25.2],  # W/(m·K)
+    scale=1.0,
+) 
+
+_625_cp_func = _make_interp(
+    T_pts=[255.15, 294.15, 366.15, 477.15, 589.15, 700.15, 811.15, 922.15, 1033.15, 1144.15, 1255.15, 1366.15],
+    v_pts=[402,   410,   427,   456,   481,   511,   536,   565,   590,   620,   645,   670], # J/(kg·K)
+    scale=1.0,
+)
+
+INCONEL_625 = Material(
+    name='Inconel 625',
+    k_func=_625_k_func,
+    rho_func=_const(8442),   
+    cp_func=_625_cp_func,      
+    L_func=_const(330e3),      # heat of fusion [J/kg] https://www.manifestalloys.com/blog/inconel-625-vs-718.html
+    T_ablation=1570.0,         
+    color="#39354e",
+)
+
+# From https://iopscience.iop.org/article/10.1088/1742-6596/1382/1/012175/pdf
+_718_k_func = _make_interp(
+    T_pts=[298, 400, 500, 600, 700, 800, 1100, 1200, 1300, 1400],
+    v_pts=[9.94, 11.59, 13.24, 14.91, 16.61, 18.34, 22.72, 23.61, 24.47, 25.32], # W/(m·K)
+    scale=1.0,
+)
+
+_718_cp_func = _make_interp(
+    T_pts=[298, 400, 500, 600, 700, 800, 1100, 1200, 1300, 1400],
+    v_pts=[425, 447, 468, 489, 510, 531, 635, 635, 635, 634], # J/(kg·K)
+    scale=1.0,
+)
+
+INCONEL_718 = Material(
+    name='Inconel 718',
+    k_func=_718_k_func,
+    rho_func=_const(8190.0),   
+    cp_func=_718_cp_func,     
+    L_func=_const(310e3),   # heat of fusion [J/kg] https://www.manifestalloys.com/blog/inconel-625-vs-718.html
+    T_ablation=1533.15, #Solidus        
+    color="#2b2b3c",
+)
+
 SILICA = Material(
     name='Fused Silica (SiO₂)',
     k_func=_const(1.4),        # W/(m·K)
@@ -276,6 +352,7 @@ LIBRARY: dict[str, Material] = {
     'silica':         SILICA,
     'pica':           PICA,
     'tacot':          TACOT,
+    'phenolic_canvas': PHENOLIC_CANVAS,
 }
 
 
