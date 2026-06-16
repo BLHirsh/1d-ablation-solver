@@ -33,7 +33,7 @@ Time step:
     where α_worst accounts for the highest thermal diffusivity each material
     can reach across its full operating temperature range.
 
-Units: mm · s · J · g · °C
+Units: SI — m · s · J · kg · K
 """
 from __future__ import annotations
 import numpy as np
@@ -115,7 +115,7 @@ class Solver:
 
     @staticmethod
     def _compute_Hs(layers, mat_idx, T0, Tmelt_arr, n):
-        """Sensible enthalpy to bring each cell from T_init to T_ablation [J/mm³].
+        """Sensible enthalpy to bring each cell from T_init to T_ablation [J/m³].
 
         Always integrates rho(T)*cp(T) numerically so constant-property and
         tabulated materials are handled by the same code path.
@@ -183,7 +183,7 @@ class Solver:
         return dx
 
     def _temp(self, i: int) -> float:
-        """Temperature of cell i [°C]."""
+        """Temperature of cell i [K]."""
         T0 = self.problem.T_init
         if i == self.iL and self.mode_L == 'ablate':
             return self.Tmelt_arr[i]
@@ -192,7 +192,7 @@ class Solver:
         return T0 + self.H[i] / self.rhocp_arr[i]
 
     def E_stored(self) -> float:
-        """Current enthalpy of all remaining material [J/mm²]."""
+        """Current enthalpy of all remaining material [J/m²]."""
         total = 0.0
         for i in range(self.iL, self.iR + 1):
             if (i == self.iL and self.mode_L == 'ablate') or \
@@ -207,7 +207,7 @@ class Solver:
         return self.E_in - self.E_stored() - self.E_ablated
 
     def temp_profile(self) -> np.ndarray:
-        """Temperature at every cell centre [°C]; NaN for ablated cells."""
+        """Temperature at every cell centre [K]; NaN for ablated cells."""
         T = np.full(self.nodes, np.nan)
         for i in range(self.iL, self.iR + 1):
             T[i] = self._temp(i)
@@ -236,11 +236,11 @@ class Solver:
     # ── recession ────────────────────────────────────────────────────────────
     def _recede(self, side: str, budget: float):
         """
-        Consume `budget` [J/mm²] of net surface energy as recession.
+        Consume `budget` [J/m²] of net surface energy as recession.
 
         Each ablated slice ds contributes:
-            E_ablated += ds * Hfull   [J/mm²]
-            mass_ablated += rho * ds  [g/mm²]
+            E_ablated += ds * Hfull   [J/m²]
+            mass_ablated += rho * ds  [kg/m²]
 
         The ledger E_in = E_stored + E_ablated closes by construction.
         """
@@ -319,7 +319,7 @@ class Solver:
         for i in range(iL, iR + 1):
             T[i] = self._temp(i)
 
-        # 3. Face fluxes  Phi[i] = flux cell i → i+1 [W/mm²]
+        # 3. Face fluxes  Phi[i] = flux cell i → i+1 [W/m²]
         #    Harmonic-mean (series-resistance) conductance
         Phi = np.zeros(self.nodes)
         for i in range(iL, iR):
@@ -436,7 +436,7 @@ class Solver:
         snapshot_every: int   = 2000,
         verbose:        bool  = False,
         print_every:    int   = 5000,
-        ss_tol:         float = 0.05,   # [K/s]  steady-state temp-change threshold
+        ss_tol:         float = 0.05,   # [K/s] steady-state temp-change threshold
         ss_window:      int   = 5,      # consecutive records below threshold → SS
     ) -> Results:
         """
@@ -453,6 +453,7 @@ class Solver:
                        Set to 0 to disable.
         ss_window      Number of consecutive sub-threshold records required
                        before declaring steady state.
+
         """
         results = Results(problem_description=self.problem.describe())
         n_step  = 0
@@ -495,9 +496,9 @@ class Solver:
             if verbose and n_step % print_every == 0:
                 res_frac = self.residual() / max(self.E_in, 1e-30)
                 print(f"  t={self.t:7.3f}s  "
-                      f"rec_L={self.rec_left:6.3f}mm  "
-                      f"rec_R={self.rec_right:6.3f}mm  "
-                      f"rem={self.remaining_thickness():6.3f}mm  "
+                      f"rec_L={self.rec_left:.5f}m  "
+                      f"rec_R={self.rec_right:.5f}m  "
+                      f"rem={self.remaining_thickness():.5f}m  "
                       f"resid/E_in={res_frac:+.2e}")
             if verbose:
                 for evt in self.layer_events[n_events_logged:]:

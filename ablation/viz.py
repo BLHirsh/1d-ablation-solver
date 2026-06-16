@@ -123,10 +123,10 @@ def animate(
         cmap='inferno', vmin=T_init, vmax=T_max,
         shading='flat', zorder=2,
     )
-    plt.colorbar(pcm, ax=ax_heat, label='Temperature (°C)',
+    plt.colorbar(pcm, ax=ax_heat, label='Temperature (K)',
                  fraction=0.025, pad=0.01)
     ax_heat.set_yticks([])
-    ax_heat.set_xlabel('Position (mm)', fontsize=8)
+    ax_heat.set_xlabel('Position (m)', fontsize=8)
     ax_heat.set_xlim(0, L)
     ax_heat.tick_params(labelsize=8)
 
@@ -149,7 +149,7 @@ def animate(
 
     # Initial sim-state title (updated every frame)
     ax_heat.set_title(
-        f't = 0.000 s   |   remaining = {L:.3f} mm',
+        f't = 0.000 s   |   remaining = {L:.4f} m',
         fontsize=9, fontweight='bold', color='#111111',
     )
 
@@ -170,11 +170,11 @@ def animate(
     for mat in unique_mats:
         if mat.T_ablation < 1e15:
             ax_temp.axhline(mat.T_ablation, color=mat.color, ls=':', lw=1.2,
-                            label=f'{mat.name}  T_ab = {mat.T_ablation:.0f} °C')
+                            label=f'{mat.name}  T_ab = {mat.T_ablation:.0f} K')
 
     ax_temp.set_xlim(0, L)
     ax_temp.set_ylim(T_init, T_max * 1.08)
-    _style_ax(ax_temp, 'Temperature Profile', 'Position (mm)', 'T (°C)')
+    _style_ax(ax_temp, 'Temperature Profile', 'Position (m)', 'T (K)')
     ax_temp.legend(fontsize=7.5, loc='upper right', framealpha=0.85)
 
     # ── recession & mass ablated ──────────────────────────────────────────────
@@ -188,19 +188,19 @@ def animate(
     ax_rec.set_ylim(0, L)
     ax_rec.set_title('Recession & Mass', fontsize=9, fontweight='semibold', pad=4)
     ax_rec.set_xlabel('Time (s)', fontsize=8)
-    ax_rec.set_ylabel('Recession (mm)', fontsize=8)
+    ax_rec.set_ylabel('Recession (m)', fontsize=8)
     ax_rec.tick_params(labelsize=7.5)
     ax_rec.grid(alpha=0.22, lw=0.7, zorder=0)
 
     ax_mass = ax_rec.twinx()
     lmL, = ax_mass.plot([], [], color=col_L, lw=1.3, ls='--', label='Mass L')
     lmR, = ax_mass.plot([], [], color=col_R, lw=1.3, ls='--', label='Mass R')
-    ax_mass.set_ylabel('Mass (g/mm²)', fontsize=7.5)
+    ax_mass.set_ylabel('Mass (kg/m²)', fontsize=7.5)
     ax_mass.tick_params(axis='y', labelsize=7)
 
     ax_rec.legend(
         [lrecL, lrecR, lmL, lmR],
-        ['Rec. L (mm)', 'Rec. R (mm)', 'Mass L (g/mm²)', 'Mass R (g/mm²)'],
+        ['Rec. L (m)', 'Rec. R (m)', 'Mass L (kg/m²)', 'Mass R (kg/m²)'],
         fontsize=6.5, loc='upper left', framealpha=0.85,
     )
 
@@ -213,7 +213,7 @@ def animate(
     ax_erg.set_xlim(0, t_end)
     ax_erg.set_title('Energy Budget', fontsize=9, fontweight='semibold', pad=4)
     ax_erg.set_xlabel('Time (s)', fontsize=8)
-    ax_erg.set_ylabel('Energy (J/mm²)', fontsize=8)
+    ax_erg.set_ylabel('Energy (J/m²)', fontsize=8)
     ax_erg.tick_params(labelsize=7.5)
     ax_erg.grid(alpha=0.22, lw=0.7, zorder=0)
 
@@ -289,15 +289,15 @@ def animate(
         rem = solver.remaining_thickness()
         if solver.done or solver.t >= t_end:
             ax_heat.set_title(
-                f'DONE  —  t = {solver.t:.3f} s   |   remaining = {rem:.3f} mm'
+                f'DONE  —  t = {solver.t:.3f} s   |   remaining = {rem:.4f} m'
                 f'   |   resid/E_in = {r:+.2e}',
                 fontsize=9, fontweight='bold', color='darkred',
             )
             ani.event_source.stop()
         else:
             ax_heat.set_title(
-                f't = {solver.t:.3f} s   |   remaining = {rem:.3f} mm   |   '
-                f'rec_L = {solver.rec_left:.3f}   rec_R = {solver.rec_right:.3f} mm',
+                f't = {solver.t:.3f} s   |   remaining = {rem:.4f} m   |   '
+                f'rec_L = {solver.rec_left:.4f}   rec_R = {solver.rec_right:.4f} m',
                 fontsize=9, fontweight='bold', color='#111111',
             )
 
@@ -358,28 +358,28 @@ def plot_results(results: 'Results', problem: 'Problem | None' = None):
 
     # ── 0: Recession ──────────────────────────────────────────────────────────
     ax = axes[0]
-    ax.plot(t, results.recession_left_mm,  lw=2, color=BLUE, label='Left face')
-    ax.plot(t, results.recession_right_mm, lw=2, color=RED, ls='--',
+    ax.plot(t, results.recession_left,  lw=2, color=BLUE, label='Left face')
+    ax.plot(t, results.recession_right, lw=2, color=RED, ls='--',
             label='Right face')
-    _s(ax, 'Surface Recession', 'Time (s)', 'Recession (mm)')
+    _s(ax, 'Surface Recession', 'Time (s)', 'Recession (m)')
     ax.legend(fontsize=8, framealpha=0.85)
 
     # ── 1: Ablation rate ──────────────────────────────────────────────────────
     ax = axes[1]
     ax.plot(t, results.ablation_rate_left,  lw=1.5, color=BLUE,
-            label='Left (mm/s)')
+            label='Left (m/s)')
     ax.plot(t, results.ablation_rate_right, lw=1.5, color=RED, ls='--',
-            label='Right (mm/s)')
-    _s(ax, 'Instantaneous Ablation Rate', 'Time (s)', 'Rate (mm/s)')
+            label='Right (m/s)')
+    _s(ax, 'Instantaneous Ablation Rate', 'Time (s)', 'Rate (m/s)')
     ax.legend(fontsize=8, framealpha=0.85)
 
     # ── 2: Mass ablated ───────────────────────────────────────────────────────
     ax = axes[2]
-    ax.plot(t, np.asarray(results.mass_ablated_left)  * 1e3, lw=2,
+    ax.plot(t, np.asarray(results.mass_ablated_left),  lw=2,
             color=BLUE, label='Left')
-    ax.plot(t, np.asarray(results.mass_ablated_right) * 1e3, lw=2,
+    ax.plot(t, np.asarray(results.mass_ablated_right), lw=2,
             color=RED, ls='--', label='Right')
-    _s(ax, 'Cumulative Mass Ablated', 'Time (s)', 'Mass ablated (mg/mm²)')
+    _s(ax, 'Cumulative Mass Ablated', 'Time (s)', 'Mass ablated (kg/m²)')
     ax.legend(fontsize=8, framealpha=0.85)
 
     # ── 3: Energy budget ──────────────────────────────────────────────────────
@@ -387,7 +387,7 @@ def plot_results(results: 'Results', problem: 'Problem | None' = None):
     ax.plot(t, results.E_in,      lw=2, color='#1a6fbd', label='E_in')
     ax.plot(t, results.E_stored,  lw=2, color=GREEN,     label='E_stored')
     ax.plot(t, results.E_ablated, lw=2, color=RED,       label='E_ablated')
-    _s(ax, 'Energy Budget', 'Time (s)', 'Energy (J/mm²)')
+    _s(ax, 'Energy Budget', 'Time (s)', 'Energy (J/m²)')
     ax.legend(fontsize=8, framealpha=0.85)
 
     # ── 4: Energy conservation ────────────────────────────────────────────────
@@ -422,7 +422,7 @@ def plot_results(results: 'Results', problem: 'Problem | None' = None):
         if problem is not None:
             total_L = sum(lay.thickness for lay in problem.layers)
             x_snap  = (np.arange(n_cells) + 0.5) * (total_L / n_cells)
-            x_label = 'Position (mm)'
+            x_label = 'Position (m)'
         else:
             x_snap  = np.arange(n_cells)
             x_label = 'Cell index'
@@ -431,7 +431,7 @@ def plot_results(results: 'Results', problem: 'Problem | None' = None):
             color = cmap(k / max(len(snaps) - 1, 1))
             label = f't = {t_snap:.2f} s' if k % step == 0 else ''
             ax.plot(x_snap, T_snap, color=color, lw=1, alpha=0.85, label=label)
-        _s(ax, 'Temperature Snapshots', x_label, 'T (°C)')
+        _s(ax, 'Temperature Snapshots', x_label, 'T (K)')
         ax.legend(fontsize=7, framealpha=0.85)
 
         # Panel 6 → summary

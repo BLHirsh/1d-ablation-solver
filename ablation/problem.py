@@ -13,7 +13,7 @@ from .boundaries import BoundaryCondition, Adiabatic
 class Layer:
     """One material layer in the stack."""
     material: Material
-    thickness: float   # [mm]
+    thickness: float   # [m]
 
 
 @dataclass
@@ -30,9 +30,9 @@ class Problem:
     right_bc : BoundaryCondition
         Boundary condition at x = total_thickness. Default: Adiabatic.
     T_init : float
-        Uniform initial temperature [°C].
-    nodes_per_mm : float
-        Grid resolution. Increase for better spatial accuracy.
+        Uniform initial temperature [K].
+    nodes_per_m : float
+        Grid resolution [nodes/m]. Increase for better spatial accuracy.
     r_target : float
         Target Fourier number for explicit time stepping (≤ 0.5).
         Lower values give smaller dt and higher accuracy.
@@ -42,8 +42,8 @@ class Problem:
     layers: List[Layer]
     left_bc: BoundaryCondition
     right_bc: BoundaryCondition = field(default_factory=Adiabatic)
-    T_init: float = 20.0
-    nodes_per_mm: float = 2.0
+    T_init: float = 293.15
+    nodes_per_m: float = 2000.0
     r_target: float = 0.40
 
     def __post_init__(self):
@@ -59,8 +59,8 @@ class Problem:
             raise TypeError(f"left_bc must be a BoundaryCondition, got {type(self.left_bc)}.")
         if not isinstance(self.right_bc, BoundaryCondition):
             raise TypeError(f"right_bc must be a BoundaryCondition, got {type(self.right_bc)}.")
-        if self.nodes_per_mm <= 0:
-            raise ValueError(f"nodes_per_mm must be > 0; got {self.nodes_per_mm}.")
+        if self.nodes_per_m <= 0:
+            raise ValueError(f"nodes_per_m must be > 0; got {self.nodes_per_m}.")
         if not (0 < self.r_target <= 0.5):
             raise ValueError(
                 f"r_target must be in (0, 0.5] for stability; got {self.r_target}."
@@ -74,8 +74,8 @@ class Problem:
         thickness: float,
         left_bc: BoundaryCondition,
         *,
-        T_init: float = 20.0,
-        nodes_per_mm: float = 2.0,
+        T_init: float = 293.15,
+        nodes_per_m: float = 2000.0,
     ) -> 'Problem':
         """Single-layer slab, heated on one face, insulated on the other."""
         return cls(
@@ -83,7 +83,7 @@ class Problem:
             left_bc=left_bc,
             right_bc=Adiabatic(),
             T_init=T_init,
-            nodes_per_mm=nodes_per_mm,
+            nodes_per_m=nodes_per_m,
         )
 
     @classmethod
@@ -93,8 +93,8 @@ class Problem:
         thickness: float,
         bc: BoundaryCondition,
         *,
-        T_init: float = 20.0,
-        nodes_per_mm: float = 2.0,
+        T_init: float = 293.15,
+        nodes_per_m: float = 2000.0,
     ) -> 'Problem':
         """Single-layer slab with identical BCs on both faces."""
         return cls(
@@ -102,7 +102,7 @@ class Problem:
             left_bc=bc,
             right_bc=bc,
             T_init=T_init,
-            nodes_per_mm=nodes_per_mm,
+            nodes_per_m=nodes_per_m,
         )
 
     @classmethod
@@ -115,8 +115,8 @@ class Problem:
         left_bc: BoundaryCondition,
         right_bc: BoundaryCondition | None = None,
         *,
-        T_init: float = 20.0,
-        nodes_per_mm: float = 2.0,
+        T_init: float = 293.15,
+        nodes_per_m: float = 2000.0,
     ) -> 'Problem':
         """Two-layer slab with independent BCs on each face."""
         return cls(
@@ -124,9 +124,9 @@ class Problem:
             left_bc=left_bc,
             right_bc=right_bc or Adiabatic(),
             T_init=T_init,
-            nodes_per_mm=nodes_per_mm,
+            nodes_per_m=nodes_per_m,
         )
-    
+
     @classmethod
     def casing(
         cls,
@@ -137,8 +137,8 @@ class Problem:
         left_bc: BoundaryCondition,
         right_bc: BoundaryCondition,
         *,
-        T_init: float = 20.0,
-        nodes_per_mm: float = 2.0,
+        T_init: float = 293.15,
+        nodes_per_m: float = 2000.0,
     ) -> 'Problem':
         """Slab with interior material and exterior casing. BCs on both sides."""
         return cls(
@@ -146,7 +146,7 @@ class Problem:
             left_bc=left_bc,
             right_bc=right_bc,
             T_init=T_init,
-            nodes_per_mm=nodes_per_mm,
+            nodes_per_m=nodes_per_m,
         )
 
     # ── properties / describe ────────────────────────────────────────────────
@@ -156,7 +156,7 @@ class Problem:
 
     @property
     def n_nodes(self) -> int:
-        return max(10, round(self.total_thickness * self.nodes_per_mm))
+        return max(10, round(self.total_thickness * self.nodes_per_m))
 
     @property
     def dx(self) -> float:
@@ -165,20 +165,18 @@ class Problem:
     def describe(self) -> str:
         lines = [
             f"Problem ({len(self.layers)} layer{'s' if len(self.layers) > 1 else ''}, "
-            f"{self.total_thickness:.2f} mm total)",
+            f"{self.total_thickness:.4f} m total)",
             f"  Left BC  : {self.left_bc}",
             f"  Right BC : {self.right_bc}",
-            f"  T_init   : {self.T_init} °C",
-            f"  Grid     : {self.n_nodes} nodes  ({self.dx:.4f} mm/cell)",
+            f"  T_init   : {self.T_init} K",
+            f"  Grid     : {self.n_nodes} nodes  ({self.dx:.6f} m/cell)",
         ]
         x = 0.0
         for i, layer in enumerate(self.layers):
             m = layer.material
             lines.append(
-                f"  Layer {i+1}  : {m.name}  {x:.2f}–{x+layer.thickness:.2f} mm  "
-                f"α={m.alpha:.3g} mm²/s  T_ab={m.T_ablation} °C  L={m.L:.0f} J/g"
+                f"  Layer {i+1}  : {m.name}  {x:.4f}–{x+layer.thickness:.4f} m  "
+                f"α={m.alpha:.3g} m²/s  T_ab={m.T_ablation} K  L={m.L:.0f} J/kg"
             )
             x += layer.thickness
         return '\n'.join(lines)
-    
-

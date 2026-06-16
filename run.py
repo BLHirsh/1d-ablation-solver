@@ -11,7 +11,6 @@ Run modes
     python run.py --demo tacot             # TACOT slab with convection + radiation
     python run.py --headless               # run headlessly and print energy summary
     python run.py --test                   # headless energy-conservation check, all demos
-    python run.py --tacot                  # TACOT benchmark vs. analytical Stefan solution
 
 GIF output
 ----------
@@ -33,64 +32,65 @@ from ablation import viz
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Problem definitions
+# All dimensions in SI: m, s, J, kg, K
 # ─────────────────────────────────────────────────────────────────────────────
 
-def make_bilayer(nodes_per_mm: float = 2.0) -> tuple[Problem, float]:
+def make_bilayer(nodes_per_m: float = 2000.0) -> tuple[Problem, float]:
     prob = Problem.bilayer(
-        ALUMINIUM, 25.0,
-        COPPER,   25.0,
-        left_bc=HeatFlux(q=8.0),     # 8 W/mm² = 8 MW/m²
-        right_bc=HeatFlux(q=8.0),
-        T_init=20.0,
-        nodes_per_mm=nodes_per_mm,
+        ALUMINIUM, 0.025,
+        COPPER,    0.025,
+        left_bc=HeatFlux(q=8e6),      # 8 MW/m²
+        right_bc=HeatFlux(q=8e6),
+        T_init=293.15,
+        nodes_per_m=nodes_per_m,
     )
     return prob, 40.0
 
 
-def make_convection(nodes_per_mm: float = 2.0) -> tuple[Problem, float]:
+def make_convection(nodes_per_m: float = 2000.0) -> tuple[Problem, float]:
     prob = Problem.one_sided(
-        ALUMINIUM, thickness=30.0,
-        left_bc=Convection(h=2e-4, T_env=1500.0),
-        T_init=20.0,
-        nodes_per_mm=nodes_per_mm,
+        ALUMINIUM, thickness=0.030,
+        left_bc=Convection(h=200.0, T_env=1773.15),   # h=200 W/(m²·K), T_env=1500°C
+        T_init=293.15,
+        nodes_per_m=nodes_per_m,
     )
     return prob, 60.0
 
 
-def make_arcjet(nodes_per_mm: float = 10.0) -> tuple[Problem, float]:
-    aeroheating = Convection(h=5e-4, T_env=1305.0)
-    reradiation = Radiation(emissivity=0.85, T_env=26.0)
+def make_arcjet(nodes_per_m: float = 10000.0) -> tuple[Problem, float]:
+    aeroheating = Convection(h=500.0, T_env=1578.15)   # h=500 W/(m²·K), T_env=1305°C
+    reradiation = Radiation(emissivity=0.85, T_env=299.15)
     front_bc    = Combined([aeroheating, reradiation])
 
     prob = Problem.one_sided(
-        PICA, thickness=50.0,
+        PICA, thickness=0.050,
         left_bc=front_bc,
-        T_init=20.0,
-        nodes_per_mm=nodes_per_mm,
+        T_init=293.15,
+        nodes_per_m=nodes_per_m,
     )
     return prob, 50.0
 
 
-def make_conduction(nodes_per_mm: float = 2.0) -> tuple[Problem, float]:
+def make_conduction(nodes_per_m: float = 2000.0) -> tuple[Problem, float]:
     prob = Problem.one_sided(
-        ALUMINIUM, thickness=20.0,
-        left_bc=Convection(h=1e-4, T_env=800.0),
-        T_init=20.0,
-        nodes_per_mm=nodes_per_mm,
+        ALUMINIUM, thickness=0.020,
+        left_bc=Convection(h=100.0, T_env=1073.15),   # h=100 W/(m²·K), T_env=800°C
+        T_init=293.15,
+        nodes_per_m=nodes_per_m,
     )
     return prob, 300.0
 
 
-def make_tacot(nodes_per_mm: float = 2.0) -> tuple[Problem, float]:
-    T_init      = 26.85   # 300 K
-    aeroheating = Convection(h=3.6e-4, T_env=1400.0)
-    reradiation = Radiation(emissivity=0.9, T_env=20)
+def make_tacot(nodes_per_m: float = 2000.0) -> tuple[Problem, float]:
+    T_init      = 300.0                                # 300 K
+    aeroheating = Convection(h=360.0, T_env=1673.15)  # h=360 W/(m²·K), T_env=1400°C
+    reradiation = Radiation(emissivity=0.9, T_env=293.15)
     front_bc    = Combined([aeroheating, reradiation])
     prob = Problem.one_sided(
-        TACOT, thickness=50.0,
+        TACOT, thickness=0.050,
         left_bc=front_bc,
         T_init=T_init,
-        nodes_per_mm=nodes_per_mm,
+        nodes_per_m=nodes_per_m,
     )
     return prob, 60.0
 
@@ -128,7 +128,7 @@ def run_test_all() -> None:
     print("Running energy-conservation checks for all demos …")
     for name in DEMOS:
         make_fn = DEMOS[name]
-        prob, t_end = make_fn(nodes_per_mm=1.5)
+        prob, t_end = make_fn(nodes_per_m=1500.0)
         solver  = Solver(prob)
         results = solver.run(t_end=min(t_end, 20.0), record_every=500)
         frac    = results.max_energy_residual_fraction

@@ -15,27 +15,27 @@ class Results:
     """
     Time-series history of a simulation run.
 
-    All per-unit-area quantities are per mm² of frontal area — i.e. the
+    All per-unit-area quantities are per m² of frontal area — i.e. the
     simulation is intrinsically 1-D, but energy and mass are reported as
     areal densities so they scale to any slab area.
 
     Attributes
     ----------
     times                 [s]        recording timestamps
-    recession_left_mm     [mm]       ablation recession from left face
-    recession_right_mm    [mm]       ablation recession from right face
-    mass_ablated_left     [g/mm²]    cumulative areal mass removed from left
-    mass_ablated_right    [g/mm²]    cumulative areal mass removed from right
-    E_in                  [J/mm²]    cumulative external energy delivered
-    E_stored              [J/mm²]    enthalpy currently stored in material
-    E_ablated             [J/mm²]    enthalpy carried away by ablated mass
-    energy_residual       [J/mm²]    |E_in - E_stored - E_ablated| (should be ~0)
-    snapshots             (t, T[])   sparse temperature-profile history
+    recession_left        [m]        ablation recession from left face
+    recession_right       [m]        ablation recession from right face
+    mass_ablated_left     [kg/m²]    cumulative areal mass removed from left
+    mass_ablated_right    [kg/m²]    cumulative areal mass removed from right
+    E_in                  [J/m²]     cumulative external energy delivered
+    E_stored              [J/m²]     enthalpy currently stored in material
+    E_ablated             [J/m²]     enthalpy carried away by ablated mass
+    energy_residual       [J/m²]     |E_in - E_stored - E_ablated| (should be ~0)
+    snapshots             (t, T[])   sparse temperature-profile history [K]
     """
 
     times: List[float] = field(default_factory=list)
-    recession_left_mm: List[float] = field(default_factory=list)
-    recession_right_mm: List[float] = field(default_factory=list)
+    recession_left: List[float] = field(default_factory=list)
+    recession_right: List[float] = field(default_factory=list)
     mass_ablated_left: List[float] = field(default_factory=list)
     mass_ablated_right: List[float] = field(default_factory=list)
     E_in: List[float] = field(default_factory=list)
@@ -62,8 +62,8 @@ class Results:
     def record(self, solver: 'Solver') -> None:
         """Append one data point from the current solver state."""
         self.times.append(solver.t)
-        self.recession_left_mm.append(solver.rec_left)
-        self.recession_right_mm.append(solver.rec_right)
+        self.recession_left.append(solver.rec_left)
+        self.recession_right.append(solver.rec_right)
         self.mass_ablated_left.append(solver.mass_ablated_left)
         self.mass_ablated_right.append(solver.mass_ablated_right)
         ein = solver.E_in
@@ -75,7 +75,7 @@ class Results:
         self.energy_residual.append(abs(ein - es - ea))
 
     def take_snapshot(self, solver: 'Solver') -> None:
-        """Store a full temperature profile for later plotting."""
+        """Store a full temperature profile [K] for later plotting."""
         self.snapshots.append((solver.t, solver.temp_profile().copy()))
 
     # ── derived properties ────────────────────────────────────────────────────
@@ -85,15 +85,15 @@ class Results:
 
     @property
     def rec_left(self) -> np.ndarray:
-        return np.asarray(self.recession_left_mm)
+        return np.asarray(self.recession_left)
 
     @property
     def rec_right(self) -> np.ndarray:
-        return np.asarray(self.recession_right_mm)
+        return np.asarray(self.recession_right)
 
     @property
     def ablation_rate_left(self) -> np.ndarray:
-        """Instantaneous left recession rate [mm/s], from finite differences."""
+        """Instantaneous left recession rate [m/s], from finite differences."""
         t = self.t
         if len(t) < 2:
             return np.array([0.0])
@@ -104,7 +104,7 @@ class Results:
 
     @property
     def ablation_rate_right(self) -> np.ndarray:
-        """Instantaneous right recession rate [mm/s], from finite differences."""
+        """Instantaneous right recession rate [m/s], from finite differences."""
         t = self.t
         if len(t) < 2:
             return np.array([0.0])
@@ -130,17 +130,17 @@ class Results:
         Suitable for JSON serialisation, pandas DataFrame construction, etc.
         """
         return {
-            'time_s':                  self.times,
-            'recession_left_mm':       self.recession_left_mm,
-            'recession_right_mm':      self.recession_right_mm,
-            'ablation_rate_left_mm_s': self.ablation_rate_left.tolist(),
-            'ablation_rate_right_mm_s':self.ablation_rate_right.tolist(),
-            'mass_ablated_left_g_mm2': self.mass_ablated_left,
-            'mass_ablated_right_g_mm2':self.mass_ablated_right,
-            'E_in_J_mm2':              self.E_in,
-            'E_stored_J_mm2':          self.E_stored,
-            'E_ablated_J_mm2':         self.E_ablated,
-            'energy_residual_J_mm2':   self.energy_residual,
+            'time_s':                   self.times,
+            'recession_left_m':         self.recession_left,
+            'recession_right_m':        self.recession_right,
+            'ablation_rate_left_m_s':   self.ablation_rate_left.tolist(),
+            'ablation_rate_right_m_s':  self.ablation_rate_right.tolist(),
+            'mass_ablated_left_kg_m2':  self.mass_ablated_left,
+            'mass_ablated_right_kg_m2': self.mass_ablated_right,
+            'E_in_J_m2':                self.E_in,
+            'E_stored_J_m2':            self.E_stored,
+            'E_ablated_J_m2':           self.E_ablated,
+            'energy_residual_J_m2':     self.energy_residual,
         }
 
     def to_csv(self, path: str) -> None:
@@ -162,8 +162,8 @@ class Results:
     def summary(self) -> str:
         if not self.times:
             return "No data recorded."
-        rec_L  = self.recession_left_mm[-1]
-        rec_R  = self.recession_right_mm[-1]
+        rec_L  = self.recession_left[-1]
+        rec_R  = self.recession_right[-1]
         mabl_L = self.mass_ablated_left[-1]
         mabl_R = self.mass_ablated_right[-1]
         ein    = self.E_in[-1]
@@ -173,15 +173,15 @@ class Results:
         lines = [
             '─' * 55,
             f'  t_final            = {self.t_final:.4f} s',
-            f'  Recession left     = {rec_L:.4f} mm',
-            f'  Recession right    = {rec_R:.4f} mm',
-            f'  Mass ablated left  = {mabl_L:.6f} g/mm²',
-            f'  Mass ablated right = {mabl_R:.6f} g/mm²',
-            f'  E_in               = {ein:.4f} J/mm²',
-            f'  E_stored           = {es:.4f} J/mm²',
-            f'  E_ablated          = {ea:.4f} J/mm²',
+            f'  Recession left     = {rec_L:.6f} m',
+            f'  Recession right    = {rec_R:.6f} m',
+            f'  Mass ablated left  = {mabl_L:.6f} kg/m²',
+            f'  Mass ablated right = {mabl_R:.6f} kg/m²',
+            f'  E_in               = {ein:.4e} J/m²',
+            f'  E_stored           = {es:.4e} J/m²',
+            f'  E_ablated          = {ea:.4e} J/m²',
             f'  Ablation fraction  = {ea/max(ein,1e-30)*100:.1f}% of E_in',
-            f'  Energy residual    = {self.energy_residual[-1]:.2e} J/mm²',
+            f'  Energy residual    = {self.energy_residual[-1]:.2e} J/m²',
             f'  Max resid/E_in     = {self.max_energy_residual_fraction:.2e}',
             f'  Fully ablated      = {self.fully_ablated}',
         ]

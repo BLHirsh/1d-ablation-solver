@@ -4,16 +4,16 @@ Boundary condition types.
 Each BC implements:
     flux(T_surface: float) -> float
 
-returning the total heat flux INTO the surface [W/mm²].
+returning the total heat flux INTO the surface [W/m²].
 
-Units: W/mm² (flux), °C (temperatures), K conversion where applicable.
+Units: W/m² (flux), K (temperatures).
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 
-# Stefan-Boltzmann constant in mm units: 5.6704e-8 W/(m²·K⁴) / 1e6 mm²/m²
-SIGMA_MM = 5.6704e-14   # [W/(mm²·K⁴)]
+# Stefan-Boltzmann constant [W/(m²·K⁴)]
+SIGMA = 5.6704e-8
 
 
 class BoundaryCondition:
@@ -26,26 +26,26 @@ class BoundaryCondition:
 
 @dataclass
 class HeatFlux(BoundaryCondition):
-    """Fixed incident heat flux [W/mm²].
+    """Fixed incident heat flux [W/m²].
     Flux is independent of surface T.
 
     q > 0: energy flows into the body.
     """
-    q: float  # [W/mm²]
+    q: float  # [W/m²]
 
     def flux(self, T_surface: float) -> float:
         return self.q
 
     def __str__(self) -> str:
-        return f"HeatFlux(q={self.q} W/mm²)"
+        return f"HeatFlux(q={self.q} W/m²)"
 
 
 @dataclass
 class Convection(BoundaryCondition):
     """Newton's law of cooling: q = h·(T_env - T_s).
 
-    h  [W/(mm²·K)]  | heat transfer coefficient
-    T_env [°C]      | environment / adiabatic wall temperature
+    h  [W/(m²·K)]  | heat transfer coefficient
+    T_env [K]       | environment / adiabatic wall temperature
     """
     h: float
     T_env: float
@@ -54,28 +54,24 @@ class Convection(BoundaryCondition):
         return self.h * (self.T_env - T_surface)
 
     def __str__(self) -> str:
-        return f"Convection(h={self.h} W/mm²K, T_env={self.T_env}°C)"
+        return f"Convection(h={self.h} W/m²K, T_env={self.T_env} K)"
 
 
 @dataclass
 class Radiation(BoundaryCondition):
     """Grey-body radiation exchange: q = ε·σ·(T_env⁴ - T_s⁴).
 
-    NOTE: Temperatures are converted to Kelvin internally.
-
     emissivity [0–1]  | surface emissivity
-    T_env [°C]        | radiation source/sink temperature
+    T_env [K]         | radiation source/sink temperature
     """
     emissivity: float
     T_env: float
 
     def flux(self, T_surface: float) -> float:
-        Ts_K = T_surface + 273.15
-        Te_K = self.T_env + 273.15
-        return self.emissivity * SIGMA_MM * (Te_K**4 - Ts_K**4)
+        return self.emissivity * SIGMA * (self.T_env**4 - T_surface**4)
 
     def __str__(self) -> str:
-        return f"Radiation(ε={self.emissivity}, T_env={self.T_env}°C)"
+        return f"Radiation(ε={self.emissivity}, T_env={self.T_env} K)"
 
 
 @dataclass
